@@ -91,7 +91,7 @@ int main(void) {
 	for(int i = 0; i < (house_num - 1); i++) {
 		memset(visit_vertice, 0, sizeof(bool) * vertice_num);
 		Search(vertice, visit_vertice, house_num, house_distance[i], house, i);
-		printf("searching... : %d\n",i);
+//		printf("searching... : %d\n",i);
 	}
 
 	//저장된 집들간의 거리를 이용해서 최소거리와 최대거리를 구한다.
