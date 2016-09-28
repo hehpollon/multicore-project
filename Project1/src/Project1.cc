@@ -1,10 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <queue>
 #include <limits.h>
 
-using namespace std;
 //각 vertice들에 연결된 vertex들을 저장하기 위한 링크리스트의 노드들이다. 그래프를 그리는데 이용된다.
 typedef struct GraphNode {
 
@@ -15,11 +13,22 @@ typedef struct GraphNode {
 
 //각 vertex사이의 길이를 알기위한 함수에 이용되는 큐에 들어가는 노드이다.
 typedef struct QueueNode {
-
-	int vertex;
-	int path;
-
+		int vertex;
+		int path;
+		struct QueueNode *next;
 } QueueNode;
+
+//흔히 볼 수 있는 Queue 자료구조이다.
+typedef struct Queue{
+		int count;
+		QueueNode *front;
+		QueueNode *rear;
+} Queue;
+
+Queue* CreateQueue();
+void DestroyQueue(Queue *qptr);
+void AddRear(Queue *qptr, int vertex, int path);
+void RemoveFront(Queue *qptr);
 
 /*
  * 각 vertex들과 인접해있는 vertex표현을 위해 해당 인접한 vertex를 링크리스트에 삽입하는 함수이다.
@@ -91,7 +100,6 @@ int main(void) {
 	for(int i = 0; i < (house_num - 1); i++) {
 		memset(visit_vertice, 0, sizeof(bool) * vertice_num);
 		Search(vertice, visit_vertice, house_num, house_distance[i], house, i);
-//		printf("searching... : %d\n",i);
 	}
 
 	//저장된 집들간의 거리를 이용해서 최소거리와 최대거리를 구한다.
@@ -106,17 +114,14 @@ int main(void) {
 		}
 	}
 
-
-
-
 	printf("%d\n", least);
-	printf("%d\n", most);
+	printf("%d", most);
 
     return 0;
 }
 
 
-void InsertEdge(GraphNode **vertice, int start, int end){
+void InsertEdge(GraphNode **vertice, int start, int end) {
 
 	//node를 동적할당 해주고 node에 정보를 채워준다. 그리고 vertice_start node와 연결을 해준다.
 	GraphNode *node;
@@ -126,11 +131,55 @@ void InsertEdge(GraphNode **vertice, int start, int end){
 	vertice[start] = node;
 }
 
+Queue* CreateQueue() {
+	Queue *new_queue =(Queue *)malloc(sizeof(Queue));
+	new_queue->count = 0;
+	new_queue->front = NULL;
+	new_queue->rear = NULL;
+	return new_queue;
+}
+
+void DestroyQueue(Queue *qptr) {
+	while(qptr->count!=0) {
+		RemoveFront(qptr);
+	}
+	free(qptr);
+}
+
+void AddRear(Queue *qptr, int vertex, int path) {
+	QueueNode *new_node = (QueueNode *)malloc(sizeof(QueueNode));
+	new_node->vertex = vertex;
+	new_node->path = path;
+	new_node->next = NULL;
+
+	if (qptr->count == 0) {
+		qptr->front = new_node;
+		qptr->rear = new_node;
+	}
+	else {
+		qptr->rear->next = new_node;
+		qptr->rear = new_node;
+	}
+	qptr->count++;
+}
+
+void RemoveFront(Queue *qptr) {
+	if (qptr->count==0) {
+		return;
+	}
+	else {
+		QueueNode *tmp = qptr->front;
+		qptr->front = tmp->next;
+		free(tmp);
+		qptr->count--;
+		return;
+	}
+}
+
 
 void Search(GraphNode **vertice, bool *visit_vertice, int house_num, int *house_distance, int *house, int start_num){
 
-	queue<QueueNode> queue;
-	QueueNode q_node;
+	Queue *queue = CreateQueue();
 	
 	//house[start_num]과 얼마나 떨어져있는지를 저장한다. 초기에는 한단계 이동하므로 1부터 시작한다.
 	int distance = 1;
@@ -140,9 +189,7 @@ void Search(GraphNode **vertice, bool *visit_vertice, int house_num, int *house_
 	GraphNode *tmp = vertice[house[start_num]];//해당 시작되는 집을 구한다.
 	while(true){
 		if(visit_vertice[tmp->vertex] == 0){//해당 vertex와 인접해있는 vertex를 방문하고 만약 방문하지 않았다면
-			q_node.vertex = tmp->vertex;
-			q_node.path = distance;
-			queue.push(q_node);
+			AddRear(queue, tmp->vertex, distance);
 			visit_vertice[tmp->vertex] = 1;
 			//큐에 노드를 넣고 해당 vertex를 방문했다고 표시.
 
@@ -154,22 +201,23 @@ void Search(GraphNode **vertice, bool *visit_vertice, int house_num, int *house_
 					house_distance[i] = distance;
 					count_end ++;
 					if (count_end == house_num){
+						DestroyQueue(queue);
 						return;
 					}
 				}
 			}
-
 		}
+
 				
 		tmp = tmp->link;
 		if(tmp == NULL){
 			//만약 큐에 저장된 노드의 거리와 함수의 distance가 같아진다면 다음 해당 거리만큼은 다 구했기 때문에
 			//다음 단계의 거리를 구하기 위해 distance값을 1증가 시킨다.
-			if(distance == queue.front().path){
+			if(distance == queue->front->path){
 				distance++;
 			}
-			tmp = vertice[queue.front().vertex];
-			queue.pop();
+			tmp = vertice[queue->front->vertex];
+			RemoveFront(queue);
 			continue;
 		}
 	}
