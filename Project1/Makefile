@@ -1,26 +1,19 @@
-TARGET = Project1
-
 CC = g++
-CFLAGS = -g -Wall -std=c++11
-
-LINKER = g++ -o
-LFLAGS = -Wall
+CXXFLAGS = -g -Wall -std=c++11
 
 SRCDIR = src
-OBJDIR = obj
 BINDIR = bin
 
-SRCS := $(wildcard $(SRCDIR)/*.cc)
-INC := $(wildcard $(SRCDIR)/*.h)
-OBJS := $(SRCS:$(SRCDIR)/%.cc=$(OBJDIR)/%.o)
-rm = rm -f
+SRCS := $(SRCDIR)/Project1.cpp
+OBJS := $(SRCS:$(SRCDIR)/.cpp=.o)
+INC := ./include/
 
-$(BINDIR)/$(TARGET):$(OBJS)
-	$(LINKER) $@ $(LFLAGS) $(OBJS)
+CPPFLAGS += -I $(INC)
 
-$(OBJS):$(OBJDIR)/%.o:$(SRCDIR)/%.cc
-	$(CC) $(CFLAGS) -c $< -o $@
+TARGET = Project1
+
+$(BINDIR)/$(TARGET) : $(OBJS)
+	$(CC) $(CXXFLAGS) $(CPPFLAGS) -o $(BINDIR)/$(TARGET) $(OBJS)
 
 clean:
-	$(rm) $(BINDIR)/$(TARGET) obj/$(TARGET).o
-
+	rm -f $(BINDIR)/$(TARGET)
