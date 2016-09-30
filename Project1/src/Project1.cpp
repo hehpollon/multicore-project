@@ -105,7 +105,6 @@ int main(void) {
 	for (int i=0; i < house_num; i++) {
 		scanf("%d", &temp);
 		house[i] = temp;
-		printf("%d, ",house[i]);
 	}
 
 	//printf("test1\n");
