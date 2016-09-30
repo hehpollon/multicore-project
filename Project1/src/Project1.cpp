@@ -4,7 +4,7 @@
 #include <limits.h>
 #include <pthread.h>
 
-#define NUM_THREAD 4
+#define NUM_THREAD 1
 
 int g_cnt_global = 0;
 
@@ -12,7 +12,6 @@ int g_cnt_global = 0;
 typedef struct GraphNode {
 	int vertex;
 	struct GraphNode *link;
-	bool is_house = false;
 
 } GraphNode;
 
@@ -71,7 +70,7 @@ void InsertEdge(GraphNode **vertice, int start, int end, bool *house_vertice);
  *
  */
 void Search(GraphNode **vertice, bool *visit_vertice, int house_num, int *house_distance_least,
-					int *house_distance_most, int *house, int start_num);
+					int *house_distance_most, int *house, int start_num, int *house_vertice);
 
 pthread_mutex_t g_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -80,12 +79,17 @@ void *ThreadFunc(void *arg){
 	MyArg *my_arg = (MyArg *) arg;	
 	int start_num;
 	bool visit_vertice[(my_arg->vertice_num + 1)];
+	bool house_vertice[(vertice_num + 1)];
 	while(g_cnt_global < (my_arg->house_num - 1)) {		
 		pthread_mutex_lock(&g_mutex);
 		start_num = g_cnt_global;
 		g_cnt_global ++;
 		pthread_mutex_unlock(&g_mutex);
 		memset(visit_vertice, 0, sizeof(bool) * (my_arg->vertice_num + 1));
+		memset(house_vertice, 0, sizeof(bool) * (vertice_num + 1));
+		for (int i=0; i < house_num; i++) {
+			house_vertice[house[i]] = 1;
+		}
 		Search(my_arg->vertice, visit_vertice, my_arg->house_num, my_arg->house_distance_least,
 				my_arg->house_distance_most, my_arg->house, start_num);
 	}
@@ -134,8 +138,8 @@ int main(void) {
 		scanf("%d", &edge_num);
 		for (int j=0; j < edge_num; j++) {
 			scanf("%d", &end_vertex);
-			InsertEdge(vertice, start_vertex, end_vertex, house_vertice);
-			InsertEdge(vertice, end_vertex, start_vertex, house_vertice);
+			InsertEdge(vertice, start_vertex, end_vertex);
+			InsertEdge(vertice, end_vertex, start_vertex);
 		}
 	}
 	
@@ -200,8 +204,6 @@ void InsertEdge(GraphNode **vertice, int start, int end, bool *house_vertice) {
 	GraphNode *node;
 	node = (GraphNode *)malloc(sizeof(GraphNode));
 	node->vertex = end;
-	if(house_vertice[end] == 1)
-		node->is_house = 1;
 	node->link = vertice[start];
 	vertice[start] = node;
 }
@@ -257,7 +259,7 @@ void RemoveFront(Queue *qptr) {
 
 
 void Search(GraphNode **vertice, bool *visit_vertice, int house_num, int *house_distance_least,
-					int *house_distance_most, int *house, int start_num){
+					int *house_distance_most, int *house, int start_num, int *house_vertice){
 
 	Queue *queue = CreateQueue();
 	
