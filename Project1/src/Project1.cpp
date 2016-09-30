@@ -4,7 +4,7 @@
 #include <limits.h>
 #include <pthread.h>
 
-#define NUM_THREAD 4
+#define NUM_THREAD 36
 
 
 //각 vertice들에 연결된 vertex들을 저장하기 위한 링크리스트의 노드들이다. 그래프를 그리는데 이용된다.
