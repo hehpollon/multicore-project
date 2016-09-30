@@ -4,9 +4,8 @@
 #include <limits.h>
 #include <pthread.h>
 
-#define NUM_THREAD 36
+#define NUM_THREAD 4
 
-int g_cnt_global = 0;
 
 //각 vertice들에 연결된 vertex들을 저장하기 위한 링크리스트의 노드들이다. 그래프를 그리는데 이용된다.
 typedef struct GraphNode {
@@ -38,9 +37,18 @@ typedef struct MyArg {
 	int *house_distance_most; 
 	int *house; 
 	int vertice_num;
+
 } MyArg;
 
-
+/*
+typedef struct MyArgMap {
+	GraphNode **vertice;
+	int start;
+	int end;
+	bool *house_verticei;
+	int num_edge;
+}
+*/
 
 Queue* CreateQueue();
 void DestroyQueue(Queue *qptr);
@@ -73,12 +81,13 @@ void Search(GraphNode **vertice, bool *visit_vertice, int house_num, int *house_
 					int *house_distance_most, int *house, int start_num);
 
 pthread_mutex_t g_mutex = PTHREAD_MUTEX_INITIALIZER;
-
+int g_cnt_global = 0;
 
 void *ThreadFunc(void *arg){
 	MyArg *my_arg = (MyArg *) arg;	
 	int start_num;
-	bool visit_vertice[(my_arg->vertice_num + 1)];
+	bool *visit_vertice;
+	visit_vertice = (bool *)malloc(my_arg->vertice_num + 1);
 	while(g_cnt_global < (my_arg->house_num - 1)) {		
 		pthread_mutex_lock(&g_mutex);
 		start_num = g_cnt_global;
@@ -88,9 +97,41 @@ void *ThreadFunc(void *arg){
 		Search(my_arg->vertice, visit_vertice, my_arg->house_num, my_arg->house_distance_least,
 				my_arg->house_distance_most, my_arg->house, start_num);
 	}
+	free(visit_vertice);
 	return NULL;
 }
+
+/*
+int g_cnt = 0;
+
+void *ThreadMap(void *arg){
+
+(GraphNode **vertice, int start, int end, bool *house_vertice) {
+
+	MyArgMap *my_arg = (MyArgMap *) arg;
+	while(g_cnt < my_arg->num_edge){
+		
+
+	}
+
+	//node를 동적할당 해주고 node에 정보를 채워준다. 그리고 vertice_start node와 연결을 해준다.
+	GraphNode *node;
+	node = (GraphNode *)malloc(sizeof(GraphNode));
+	node->vertex = end;
+	if(house_vertice[end])
+		node->is_house = 1;
+	node->link = vertice[start];
+	vertice[start] = node;
+}
+
+
 	
+
+
+}
+
+
+*/	
 
 
 int main(void) {
@@ -107,30 +148,24 @@ int main(void) {
 		house[i] = temp;
 	}
 
-	//printf("test1\n");
 
 	//init vertice (there is no 0 vertice, so vertice[0] is not used)
 	//배열 index와 vertice들의 vertex숫자를 일치시키기 위해 0번째 배열은 사용하지 않는다.
 	scanf("%d", &vertice_num);
-	//printf("HELLO\n");
 	GraphNode **vertice;
 	vertice = (GraphNode **) malloc(sizeof(GraphNode *) * (vertice_num+1));
-	//printf("test1.1\n");	
-	//
-	bool house_vertice[(vertice_num + 1)];
-	memset(house_vertice, 0, sizeof(bool) * (vertice_num + 1));
+	bool *house_vertice;
+	house_vertice = (bool *) malloc(sizeof(bool) * (vertice_num + 1));
+
 	for (int i=0; i < house_num; i++) {
 		house_vertice[house[i]] = 1;
 	}
 	
-	//printf("test1.2\n");
 
-	//
 	for (int i = 0; i < vertice_num + 1; i++) {
 		vertice[i] = NULL;
 	}
 
-	//printf("test2\n");
 
 	//init edge 각 vertice들의 인접한 관계를 표시하는 리스트들을 연결해주고 vertice배열을 채워준다.
 	//vertice배열들은 링크리스트들의 시작노드를 저장하고 있다.
@@ -146,11 +181,9 @@ int main(void) {
 		}
 	}
 	
-	//printf("test3\n");
 
 	//방문한 vertice들을 표현하기위한 배열이다. 나중 다중스레드로 코딩하기 위해서 스레드 개수만큼의 배열을 
 	//생성한다.
-//	bool visit_vertice[(vertice_num + 1)];
 	//house들간의 거리를 여기다가 저장해둔다.
 	int house_distance_least[house_num];
 	int house_distance_most[house_num];
@@ -173,16 +206,13 @@ int main(void) {
 	}
 	
 	for (int i = 0; i < temp; i++) {
-//		printf("------thread[%d] start!------\n",i);
 		if(pthread_create(&threads[i], 0, ThreadFunc, &my_arg) < 0) {
 			return 0;
-		}
-	
+		}	
 	}
 
 	for(int i = 0; i < temp; i++) {
 		pthread_join(threads[i], NULL);
-//		printf("------thread[%d] join!------\n",i);
 	}
 	//저장된 집들간의 거리를 이용해서 최소거리와 최대거리를 구한다.
 	for (int i = 0; i < house_num - 1; i++) {		
@@ -283,25 +313,19 @@ void Search(GraphNode **vertice, bool *visit_vertice, int house_num, int *house_
 		if (!visit_vertice[tmp->vertex]) {//해당 vertex와 인접해있는 vertex를 방문하고 만약 방문하지 않았다면
 			current_vertex = tmp->vertex;
 			AddRear(queue, current_vertex, distance);
-			
 			visit_vertice[current_vertex] = 1;
 			//큐에 노드를 넣고 해당 vertex를 방문했다고 표시.
-
 			//만약 방문한 vertex가 집이라면 해당 집과의 거리는 지금까지 증가된 distance값이고 
 			//이 distance값과 짧은 distance와 긴 distance값의 비교를 통해 한 집과 나머지 집사이의 
 			//최단거리 집과의 거리와 최장거리 집과의 거리를 구해나간다.
-			
 			if (tmp->is_house) 
-			{
-			//	printf("%d, ",distance);
+			{				
 				for (int i = start_num + 1; i < house_num; i++) {
 					if (house[i] == current_vertex) {
 						count_end ++;
 						break;
 					}
 				}
-			//	count_end ++;
-				
 				if (least >= distance) {
 					least = distance; 
 				} 
@@ -312,16 +336,10 @@ void Search(GraphNode **vertice, bool *visit_vertice, int house_num, int *house_
 					DestroyQueue(queue);
 					house_distance_least[start_num] = least;
 					house_distance_most[start_num] = most;
-		//			printf("%d's least : %d, most : %d \n",start_num,house_distance_least[start_num], house_distance_most[start_num]);
 					return;
 				}
-
-				
 			}
-			
-		}
-
-				
+		}	
 		tmp = tmp->link;
 		if (tmp == NULL) {
 			//만약 큐에 저장된 노드의 거리와 함수의 distance가 같아진다면 다음 해당 거리만큼은 다 구했기 때문에
