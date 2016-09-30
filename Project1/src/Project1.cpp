@@ -4,7 +4,7 @@
 #include <limits.h>
 #include <pthread.h>
 
-#define NUM_THREAD 4
+#define NUM_THREAD 36
 
 int g_cnt_global = 0;
 
@@ -105,24 +105,33 @@ int main(void) {
 	for (int i=0; i < house_num; i++) {
 		scanf("%d", &temp);
 		house[i] = temp;
+		printf("%d, ",house[i]);
 	}
 
+	//printf("test1\n");
 
 	//init vertice (there is no 0 vertice, so vertice[0] is not used)
 	//배열 index와 vertice들의 vertex숫자를 일치시키기 위해 0번째 배열은 사용하지 않는다.
 	scanf("%d", &vertice_num);
-	GraphNode *vertice[(vertice_num + 1)];
-	
+	//printf("HELLO\n");
+	GraphNode **vertice;
+	vertice = (GraphNode **) malloc(sizeof(GraphNode *) * (vertice_num+1));
+	//printf("test1.1\n");	
 	//
 	bool house_vertice[(vertice_num + 1)];
 	memset(house_vertice, 0, sizeof(bool) * (vertice_num + 1));
 	for (int i=0; i < house_num; i++) {
 		house_vertice[house[i]] = 1;
 	}
+	
+	//printf("test1.2\n");
+
 	//
 	for (int i = 0; i < vertice_num + 1; i++) {
 		vertice[i] = NULL;
 	}
+
+	//printf("test2\n");
 
 	//init edge 각 vertice들의 인접한 관계를 표시하는 리스트들을 연결해주고 vertice배열을 채워준다.
 	//vertice배열들은 링크리스트들의 시작노드를 저장하고 있다.
@@ -138,6 +147,8 @@ int main(void) {
 		}
 	}
 	
+	//printf("test3\n");
+
 	//방문한 vertice들을 표현하기위한 배열이다. 나중 다중스레드로 코딩하기 위해서 스레드 개수만큼의 배열을 
 	//생성한다.
 //	bool visit_vertice[(vertice_num + 1)];
