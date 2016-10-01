@@ -191,8 +191,8 @@ void Search(Vertex *vertice, bool *visit_vertice, unsigned int *house_distance_l
 		current_vertex = search_array[i];
 		adjacency = vertice[current_vertex].adjacency;
 		count = vertice[current_vertex].count;
-	//	printf("count : %d\n", count);
-		for (j = 0; j < count; j++) {
+		j = 0;
+		do {
 			adjacency_vertex = adjacency[j];
 			if (!visit_vertice[adjacency_vertex]) {
 				search_array[search_array_count] = adjacency_vertex;
@@ -205,23 +205,22 @@ void Search(Vertex *vertice, bool *visit_vertice, unsigned int *house_distance_l
 							count_end ++;
 							break;
 						}
-					}
+				}
 					if (!least_flag) {
 						most = distance;
 					}else {
 						least = distance;
 						least_flag = false;
-					}
+				}
 					if(count_end == house_num) {	
 						house_distance_least[start_num] = least + 1;
 						house_distance_most[start_num] = most + 1;
 						return;
-
 					}
 				}
 			}
-		}
-		
+			j++;
+		} while (j < count);
 		if(i == cycle_count) {
 			cycle_count = cycle_count + total_count;
 			total_count = 0;
