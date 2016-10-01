@@ -95,6 +95,8 @@ int main(void) {
 		}
 	}
 
+	free(house_vertice);
+
 	int house_distance_least[house_num];
 	int house_distance_most[house_num];
 
@@ -200,7 +202,7 @@ void Search(Vertex *vertice, bool *visit_vertice, int *house_distance_least,
 						}
 					}
 					
-					//count_end ++;
+//					count_end ++;
 
 					if (!least_flag) {
 						most = distance;
@@ -228,11 +230,5 @@ void Search(Vertex *vertice, bool *visit_vertice, int *house_distance_least,
 		i++;
 
 	}
-/*
-	house_distance_least[start_num] = least + 1;
-	house_distance_most[start_num] = most + 1;
-	
-	free(search_array);
-*/	
 
 }
