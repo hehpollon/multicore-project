@@ -6,39 +6,41 @@
 
 #define NUM_THREAD 36
 
-
 typedef struct Vertex {
 	
-	int count = 0;
-	bool is_house = false;
-	int adjacency[10] = {0};
+	unsigned int count = 0;
+	bool is_house = 0;
+	unsigned int adjacency[10] = {0};
 	
 } Vertex;
 
 typedef struct MyArg {
 
 	Vertex *vertice;
-	int house_num;
-	int *house_distance_least;
-	int *house_distance_most; 
-	int *house; 
-	int vertice_num;
+	unsigned int house_num;
+	unsigned int *house_distance_least;
+	unsigned int *house_distance_most; 
+	unsigned int *house; 
+	unsigned int vertice_num;
 
 } MyArg;
+void InsertEdge(Vertex *vertice, unsigned int start, unsigned int end, bool *house_vertice);
+void Search(Vertex *vertice, bool *visit_vertice, unsigned int *house_distance_least,
+		unsigned int *house_distance_most, unsigned int vertice_num, unsigned int house_num, unsigned int *house, unsigned int start_num, unsigned int *search_array);
 
-void InsertEdge(Vertex *vertice, int start, int end, bool *house_vertice);
-void Search(Vertex *vertice, bool *visit_vertice, int *house_distance_least,
-		int *house_distance_most, int vertice_num, int house_num, int *house, int start_num);
 
 
 pthread_mutex_t g_mutex = PTHREAD_MUTEX_INITIALIZER;
-int g_cnt_global = 0;
+unsigned int g_cnt_global = 0;
 
 void *ThreadFunc(void *arg){
 	MyArg *my_arg = (MyArg *) arg;	
-	int start_num;
+	unsigned int start_num;
 	bool *visit_vertice;
 	visit_vertice = (bool *)malloc(my_arg->vertice_num + 1);
+	unsigned int *search_array;
+	search_array = (unsigned int *) malloc(sizeof(unsigned int) * my_arg->vertice_num);
+	
 	while(g_cnt_global < (my_arg->house_num - 1)) {		
 		pthread_mutex_lock(&g_mutex);
 		start_num = g_cnt_global;
@@ -46,9 +48,10 @@ void *ThreadFunc(void *arg){
 		pthread_mutex_unlock(&g_mutex);
 		memset(visit_vertice, 0, sizeof(bool) * (my_arg->vertice_num + 1));
 		Search(my_arg->vertice, visit_vertice, my_arg->house_distance_least,
-		my_arg->house_distance_most, my_arg->vertice_num, my_arg->house_num, my_arg->house, start_num);
+		my_arg->house_distance_most, my_arg->vertice_num, my_arg->house_num, my_arg->house, start_num, search_array);
 	}
 	free(visit_vertice);
+	free(search_array);
 	return NULL;
 }
 
@@ -57,14 +60,14 @@ void *ThreadFunc(void *arg){
 
 int main(void) {
 
-	int house_num, vertice_num;				//집들과 vertex 총 개수
+	unsigned int house_num, vertice_num;				//집들과 vertex 총 개수
 
-	int temp;
+	unsigned int temp;
 	scanf("%d", &house_num);
-	int house[house_num]; 					//house들의 vertex를 저장하기 위한 배열이다
+	unsigned int house[house_num]; 					//house들의 vertex를 저장하기 위한 배열이다
 
 	//init house[]
-	for (int i=0; i < house_num; i++) {
+	for (unsigned int i=0; i < house_num; i++) {
 		scanf("%d", &temp);
 		house[i] = temp;
 	}
@@ -79,16 +82,16 @@ int main(void) {
 	bool *house_vertice;
 	house_vertice = (bool *) malloc(sizeof(bool) * (vertice_num + 1));
 
-	for (int i=0; i < house_num; i++) {
+	for (unsigned int i=0; i < house_num; i++) {
 		house_vertice[house[i]] = 1;
 	}
 
 	scanf("%d", &temp);
-	int edge_num, start_vertex, end_vertex;
-	for (int i=0; i < temp; i++) {
+	unsigned int edge_num, start_vertex, end_vertex;
+	for (unsigned int i=0; i < temp; i++) {
 		scanf("%d", &start_vertex);
 		scanf("%d", &edge_num);
-		for (int j=0; j < edge_num; j++) {
+		for (unsigned int j=0; j < edge_num; j++) {
 			scanf("%d", &end_vertex);
 			InsertEdge(vertice, start_vertex, end_vertex, house_vertice);
 			InsertEdge(vertice, end_vertex, start_vertex, house_vertice);
@@ -97,8 +100,8 @@ int main(void) {
 
 	free(house_vertice);
 
-	int house_distance_least[house_num];
-	int house_distance_most[house_num];
+	unsigned int house_distance_least[house_num];
+	unsigned int house_distance_most[house_num];
 
 
 	pthread_t threads[NUM_THREAD];
@@ -118,20 +121,20 @@ int main(void) {
 		temp = house_num - 1;
 	}
 		
-	for (int i = 0; i < temp; i++) {
+	for (unsigned int i = 0; i < temp; i++) {
 		if(pthread_create(&threads[i], 0, ThreadFunc, &my_arg) < 0) {
 			return 0;
 		}	
 	}
 
-	for(int i = 0; i < temp; i++) {
+	for(unsigned int i = 0; i < temp; i++) {
 		pthread_join(threads[i], NULL);
 	}
 
 
-	int least = INT_MAX;
-	int most = 0;
-	for (int i = 0; i < house_num - 1; i++) {		
+	unsigned int least = INT_MAX;
+	unsigned int most = 0;
+	for (unsigned int i = 0; i < house_num - 1; i++) {		
 		if (least >= house_distance_least[i]) {
 			least = house_distance_least[i]; 
 		}
@@ -147,46 +150,48 @@ int main(void) {
     return 0;
 }
 
-void InsertEdge(Vertex *vertice, int start, int end, bool *house_vertice) {
+void InsertEdge(Vertex *vertice, unsigned int start, unsigned int end, bool *house_vertice) {
 	
 	vertice[start].adjacency[vertice[start].count] = end;
 	vertice[start].count ++;
 	if(house_vertice[start]) {
-		vertice[start].is_house = true;
+		vertice[start].is_house = 1;
 	}
 }
 
-void Search(Vertex *vertice, bool *visit_vertice, int *house_distance_least,
-		int *house_distance_most, int vertice_num, int house_num, int *house, int start_num) {	
-	int *search_array;
-	search_array = (int *) malloc(sizeof(int) * vertice_num);
+void Search(Vertex *vertice, bool *visit_vertice, unsigned int *house_distance_least,
+		unsigned int *house_distance_most, unsigned int vertice_num, unsigned int house_num, unsigned int *house, unsigned int start_num, unsigned int *search_array) {	
 	
-	int distance = 0;
+	unsigned int distance = 0;
 	search_array[0] = house[start_num];
 	
 	//------------------------ for문안에서 지속적으로 변화하는 값
-	int count;
-	int current_vertex;
-	int adjacency_vertex;
+	unsigned int *adjacency;
+	unsigned int adjacency_vertex;
+	unsigned int count;
+	unsigned int current_vertex;
 	//------------------------
 	
-	int total_count = 0;
-	int cycle_count = 0;
-	int search_array_count = 1;
+	unsigned int total_count = 0;
+	unsigned int cycle_count = 0;
+	unsigned int search_array_count = 1;
 
 	bool least_flag = true;
-	int least = 0;
-	int most = 0;
+	unsigned int least = 0;
+	unsigned int most = 0;
+
 	visit_vertice[house[start_num]] = 1;
 	
-	int i = 0;
-	int count_end = start_num + 1;
-	int *adjacency;
+	unsigned int i = 0;
+	unsigned int count_end = start_num + 1;
+
+	unsigned int j;
+	unsigned int k;
 	while(true) {
 		current_vertex = search_array[i];
-		count = vertice[current_vertex].count;
 		adjacency = vertice[current_vertex].adjacency;
-		for (int j = 0; j < count; j++) {
+		count = vertice[current_vertex].count;
+		for (j = 0; j < count; j++) {
 			adjacency_vertex = adjacency[j];
 			if (!visit_vertice[adjacency_vertex]) {
 				search_array[search_array_count] = adjacency_vertex;
@@ -194,27 +199,21 @@ void Search(Vertex *vertice, bool *visit_vertice, int *house_distance_least,
 				search_array_count ++;
 				total_count ++;
 				if (vertice[adjacency_vertex].is_house){
-					
-					for (int i = start_num + 1; i < house_num; i++) {
-						if (house[i] == adjacency_vertex) {
+					for (k = start_num + 1; k < house_num; k++) {
+						if (house[k] == adjacency_vertex) {
 							count_end ++;
 							break;
 						}
 					}
-					
-//					count_end ++;
-
 					if (!least_flag) {
 						most = distance;
 					}else {
 						least = distance;
 						least_flag = false;
 					}
-					if(count_end == house_num) {
-						
+					if(count_end == house_num) {	
 						house_distance_least[start_num] = least + 1;
 						house_distance_most[start_num] = most + 1;
-						free(search_array);
 						return;
 
 					}
