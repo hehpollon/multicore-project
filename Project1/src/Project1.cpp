@@ -67,7 +67,7 @@ int main(void) {
 	unsigned int house[house_num]; 					//house들의 vertex를 저장하기 위한 배열이다
 
 	//init house[]
-	for (insigned int i=0; i < house_num; i++) {
+	for (unsigned int i=0; i < house_num; i++) {
 		scanf("%d", &temp);
 		house[i] = temp;
 	}
