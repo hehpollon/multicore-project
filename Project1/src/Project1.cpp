@@ -11,6 +11,7 @@ typedef struct Vertex {
 	unsigned int count = 0;
 	bool is_house = 0;
 	unsigned int adjacency[10] = {0};
+	unsigned int house;
 	
 } Vertex;
 
@@ -154,8 +155,9 @@ void InsertEdge(Vertex *vertice, unsigned int start, unsigned int end, bool *hou
 	
 	vertice[start].adjacency[vertice[start].count] = end;
 	vertice[start].count ++;
-	if(house_vertice[start]) {
+	if(house_vertice[end]) {
 		vertice[start].is_house = 1;
+		vertice[start].house = end;
 	}
 }
 
@@ -164,6 +166,7 @@ void Search(Vertex *vertice, bool *visit_vertice, unsigned int *house_distance_l
 	
 	register unsigned int distance = 0;
 	search_array[0] = house[start_num];
+	bool *visit_house = (bool *)malloc(vertice_num + 1);
 	
 	//------------------------ for문안에서 지속적으로 변화하는 값
 	register unsigned int *adjacency;
@@ -183,12 +186,38 @@ void Search(Vertex *vertice, bool *visit_vertice, unsigned int *house_distance_l
 	visit_vertice[house[start_num]] = 1;
 	
 	register unsigned int i = 0;
-	register unsigned int count_end = start_num + 1;
-
+	register unsigned int count_end = 1 + start_num;
 	register unsigned int j;
+	register unsigned int temp_house;
 	register unsigned int k;
 	while(true) {
 		current_vertex = search_array[i];
+		if (vertice[current_vertex].is_house) {
+			temp_house = vertice[current_vertex].house;
+			if(!visit_house[temp_house]) {
+				visit_house[temp_house] = 1;
+				for(k = start_num + 1; k < house_num; k++){
+					if (house[k] == temp_house) {
+						count_end++;
+						break;
+					}
+				}
+				if (!least_flag) {
+					most = distance;
+				}else {
+					if(distance > 1){
+						least = distance;
+						least_flag = false;
+					}
+				}
+				if(count_end == house_num) {	
+					house_distance_least[start_num] = least + 1;
+					house_distance_most[start_num] = most + 1;
+					return;
+				}
+			}
+		}
+
 		adjacency = vertice[current_vertex].adjacency;
 		count = vertice[current_vertex].count;
 		j = 0;
@@ -199,25 +228,6 @@ void Search(Vertex *vertice, bool *visit_vertice, unsigned int *house_distance_l
 				visit_vertice[adjacency_vertex] = 1;
 				search_array_count ++;
 				total_count ++;
-				if (vertice[adjacency_vertex].is_house){
-					for (k = start_num + 1; k < house_num; k++) {
-						if (house[k] == adjacency_vertex) {
-							count_end ++;
-							break;
-						}
-				}
-					if (!least_flag) {
-						most = distance;
-					}else {
-						least = distance;
-						least_flag = false;
-				}
-					if(count_end == house_num) {	
-						house_distance_least[start_num] = least + 1;
-						house_distance_most[start_num] = most + 1;
-						return;
-					}
-				}
 			}
 			j++;
 		} while (j < count);
@@ -226,8 +236,9 @@ void Search(Vertex *vertice, bool *visit_vertice, unsigned int *house_distance_l
 			total_count = 0;
 			distance++;
 		}
-		i++;
 
+		i++;
 	}
+				
 
 }
