@@ -67,7 +67,7 @@ int main(void) {
 	unsigned int house[house_num]; 					//house들의 vertex를 저장하기 위한 배열이다
 
 	//init house[]
-	for (unsigned int i=0; i < house_num; i++) {
+	for (insigned int i=0; i < house_num; i++) {
 		scanf("%d", &temp);
 		house[i] = temp;
 	}
@@ -162,35 +162,36 @@ void InsertEdge(Vertex *vertice, unsigned int start, unsigned int end, bool *hou
 void Search(Vertex *vertice, bool *visit_vertice, unsigned int *house_distance_least,
 		unsigned int *house_distance_most, unsigned int vertice_num, unsigned int house_num, unsigned int *house, unsigned int start_num, unsigned int *search_array) {	
 	
-	unsigned int distance = 0;
+	register unsigned int distance = 0;
 	search_array[0] = house[start_num];
 	
 	//------------------------ for문안에서 지속적으로 변화하는 값
-	unsigned int *adjacency;
-	unsigned int adjacency_vertex;
-	unsigned int count;
-	unsigned int current_vertex;
+	register unsigned int *adjacency;
+	register unsigned int adjacency_vertex;
+	register unsigned int count;
+	register unsigned int current_vertex;
 	//------------------------
 	
-	unsigned int total_count = 0;
-	unsigned int cycle_count = 0;
-	unsigned int search_array_count = 1;
+	register unsigned int total_count = 0;
+	register unsigned int cycle_count = 0;
+	register unsigned int search_array_count = 1;
 
 	bool least_flag = true;
-	unsigned int least = 0;
-	unsigned int most = 0;
+	register unsigned int least = 0;
+	register unsigned int most = 0;
 
 	visit_vertice[house[start_num]] = 1;
 	
-	unsigned int i = 0;
-	unsigned int count_end = start_num + 1;
+	register unsigned int i = 0;
+	register unsigned int count_end = start_num + 1;
 
-	unsigned int j;
-	unsigned int k;
+	register unsigned int j;
+	register unsigned int k;
 	while(true) {
 		current_vertex = search_array[i];
 		adjacency = vertice[current_vertex].adjacency;
 		count = vertice[current_vertex].count;
+	//	printf("count : %d\n", count);
 		for (j = 0; j < count; j++) {
 			adjacency_vertex = adjacency[j];
 			if (!visit_vertice[adjacency_vertex]) {
