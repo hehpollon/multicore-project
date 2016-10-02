@@ -4,7 +4,7 @@
 #include <limits.h>
 #include <pthread.h>
 
-#define NUM_THREAD 36
+#define NUM_THREAD 4
 #define MAX_EDGE_NUM 10
 
 
@@ -97,6 +97,9 @@ void Search(Vertex *vertice, bool *visit_vertice, unsigned int *house_distance_l
 
 pthread_mutex_t g_mutex = PTHREAD_MUTEX_INITIALIZER;
 unsigned int g_cnt_global = 0;
+int g_total_max = 0;
+int g_0_max = 0;
+int *g_house_distance_0_to_all;
 
 //	스레드를 만들어줄 때 실행하는 함수이다. 각각의 스레드마다 기준이 되는 집들을 정해서
 //	그 집과 다른집들사이의 최단 최장거리를 각각 구하고 다음 기준이 되는 집을 정해서 또 구하다가
@@ -154,6 +157,8 @@ int main(void) {
 	for (unsigned int i=0; i < house_num; i++) {
 		house_vertice[house[i]] = 1;
 	}
+
+	g_house_distance_0_to_all = (int *) malloc(sizeof(int) * (house_num));
 
 	//한 vertex와 인접한 vertex들정보와 집이 존재하는 여부와 집에 대한 정보를
 	//구조체 Vertex배열에다가 저장해둔다.
@@ -286,6 +291,9 @@ void Search(Vertex *vertice, bool *visit_vertice, unsigned int *house_distance_l
 				for(j = start_num + 1; j < house_num; j++) {
 					if (house[j] == temp_house) {
 						count_end++;
+						if(start_num == 0) {
+							g_house_distance_0_to_all[j] = distance + 1;
+						}
 						break;
 					}
 				}
@@ -295,11 +303,25 @@ void Search(Vertex *vertice, bool *visit_vertice, unsigned int *house_distance_l
 					if(distance > 1) {
 						least = distance;
 						least_flag = false;
+						if (g_0_max != 0) {
+							if (g_house_distance_0_to_all[start_num] + g_0_max < g_total_max) {
+								house_distance_least[start_num] = least + 1;
+								house_distance_most[start_num] = least + 1;
+								return;
+							}
+						}
+
 					}
 				}
 				if(count_end == house_num) {	//위에서 말한대로 각 집들과의 거리를 다 구하면 리턴한다.
 					house_distance_least[start_num] = least + 1;
 					house_distance_most[start_num] = most + 1;
+					if (g_total_max < most + 1) {
+						g_total_max = most + 1;
+					}
+					if (start_num == 0) {
+						g_0_max = most + 1;
+					}
 					return;
 				}
 			}
