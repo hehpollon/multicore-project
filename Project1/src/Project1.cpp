@@ -169,10 +169,10 @@ void Search(Vertex *vertice, bool *visit_vertice, unsigned int *house_distance_l
 	bool *visit_house = (bool *)malloc(vertice_num + 1);
 	
 	//------------------------ for문안에서 지속적으로 변화하는 값
-	register unsigned int *adjacency;
 	register unsigned int adjacency_vertex;
-	register unsigned int count;
-	register unsigned int current_vertex;
+	register unsigned int current_vertex;	
+	register Vertex vertice_current; 	
+	register unsigned int temp_house;
 	//------------------------
 	
 	register unsigned int total_count = 0;
@@ -188,21 +188,19 @@ void Search(Vertex *vertice, bool *visit_vertice, unsigned int *house_distance_l
 	register unsigned int i = 0;
 	register unsigned int count_end = 1 + start_num;
 	register unsigned int j;
-	register unsigned int temp_house;
 	while(true) {
 		current_vertex = search_array[i];
-		if (vertice[current_vertex].is_house) {
-			temp_house = vertice[current_vertex].house;
+		vertice_current = vertice[current_vertex];
+		if (vertice_current.is_house) {
+			temp_house = vertice_current.house;
 			if(!visit_house[temp_house]) {
 				visit_house[temp_house] = 1;
-				
 				for(j = start_num + 1; j < house_num; j++){
 					if (house[j] == temp_house) {
 						count_end++;
 						break;
 					}
 				}
-				
 				if (!least_flag) {
 					most = distance;
 				}else {
@@ -219,11 +217,9 @@ void Search(Vertex *vertice, bool *visit_vertice, unsigned int *house_distance_l
 			}
 		}
 
-		adjacency = vertice[current_vertex].adjacency;
-		count = vertice[current_vertex].count;
 		j = 0;
 		do {
-			adjacency_vertex = adjacency[j];
+			adjacency_vertex = vertice_current.adjacency[j];
 			if (!visit_vertice[adjacency_vertex]) {
 				search_array[search_array_count] = adjacency_vertex;
 				visit_vertice[adjacency_vertex] = 1;
@@ -231,7 +227,7 @@ void Search(Vertex *vertice, bool *visit_vertice, unsigned int *house_distance_l
 				total_count ++;
 			}
 			j++;
-		} while (j < count);
+		} while (j < vertice_current.count);
 		if(i == cycle_count) {
 			cycle_count = cycle_count + total_count;
 			total_count = 0;
