@@ -16,13 +16,11 @@
 //	is_house : 인접한 vertex들중에 집이 있는지에 대한 여부를 묻는 is_house 플래그
 //	house : 인접한 vertex중에 집이 있다면 집의 vertex를 저장
 //
-typedef struct Vertex {
-	
+typedef struct Vertex {	
 	unsigned int count = 0;
 	bool is_house = 0;
 	unsigned int adjacency[MAX_EDGE_NUM] = {0};
 	unsigned int house;
-	
 } Vertex;
 
 //
@@ -35,14 +33,12 @@ typedef struct Vertex {
 //	*vertice_num : vertex들의 총 개수. 
 //
 typedef struct MyArg {
-
 	Vertex *vertice;
 	unsigned int house_num;
 	unsigned int *house_distance_least;
 	unsigned int *house_distance_most; 
 	unsigned int *house; 
 	unsigned int vertice_num;
-
 } MyArg;
 
 
@@ -302,9 +298,13 @@ void Search(Vertex *vertice, bool *visit_vertice, unsigned int *house_distance_l
 				}
 				if (!least_flag) {
 					most = distance;
-					
+					//만약 앞서 기준이 되는 번째의 집번호가 start_num이고 
+					//어떤 q번째 집에 대하여 start_num과 q번째 집사이의 거리를 다른 사람이 미리 구해놨고
+					//그리고 q번째 집과 가장 멀리 떨어져있는 집과의 거리를 안다고 가정하면
+					//q 에서 start_num까지의 거리 + q에서 가장 멀리 떨어져있는 집 < 지금까지 구한 최장거리라면
+					//더이상 기준이 되는 start_num에서 다른 집들과의 거리는 구하지 않아도 된다. 이 경우 바로 리턴해준다.
 					for (unsigned int q = 0; q < house_num - 1; q ++) {
-						if (g_i_max[q] != 0 && g_house_distance_i_to_all[q][start_num] != 0){
+						if (g_i_max[q] != 0 && g_house_distance_i_to_all[q][start_num] != 0) {
 							if (g_house_distance_i_to_all[q][start_num] + g_i_max[q] < g_total_max) {
 								house_distance_least[start_num] = least + 1;
 								house_distance_most[start_num] = least + 1;
@@ -323,9 +323,13 @@ void Search(Vertex *vertice, bool *visit_vertice, unsigned int *house_distance_l
 				if(count_end == house_num) {	//위에서 말한대로 각 집들과의 거리를 다 구하면 리턴한다.
 					house_distance_least[start_num] = least + 1;
 					house_distance_most[start_num] = most + 1;
+					
+					//그리고 최장거리는 따로 글로벌 변수에 비교를 통해 갱신한다. 물론 락을 걸어야 정확하지만
+					//안정확해도 속도가 조금 늦어질 뿐, 오히려 락거는 속도가 더 느려질것으로 예상되어 걸지 않는다.
 					if (g_total_max < most + 1) {
 						g_total_max = most + 1;
 					}
+					//그리고 해당 시작점과 최장거리에 있는 점사이의 최장거리를 따로 저장한다.
 					g_i_max[start_num] = most + 1;
 					return;
 				}
@@ -346,7 +350,7 @@ void Search(Vertex *vertice, bool *visit_vertice, unsigned int *house_distance_l
 		} while (j < vertice_current.count);
 		
 		//만약 같은 distance의 거리의 vertex를 전부 다 방문했다면 다음 distance로 넘어간다.
-		if(i == cycle_count) {
+		if (i == cycle_count) {
 			cycle_count = cycle_count + total_count;
 			total_count = 0;
 			distance++;
