@@ -189,19 +189,20 @@ void Search(Vertex *vertice, bool *visit_vertice, unsigned int *house_distance_l
 	register unsigned int count_end = 1 + start_num;
 	register unsigned int j;
 	register unsigned int temp_house;
-	register unsigned int k;
 	while(true) {
 		current_vertex = search_array[i];
 		if (vertice[current_vertex].is_house) {
 			temp_house = vertice[current_vertex].house;
 			if(!visit_house[temp_house]) {
 				visit_house[temp_house] = 1;
-				for(k = start_num + 1; k < house_num; k++){
-					if (house[k] == temp_house) {
+				
+				for(j = start_num + 1; j < house_num; j++){
+					if (house[j] == temp_house) {
 						count_end++;
 						break;
 					}
 				}
+				
 				if (!least_flag) {
 					most = distance;
 				}else {
