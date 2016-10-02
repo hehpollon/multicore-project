@@ -4,7 +4,7 @@
 #include <limits.h>
 #include <pthread.h>
 
-#define NUM_THREAD 36
+#define NUM_THREAD 18
 #define MAX_EDGE_NUM 10
 
 
