@@ -303,10 +303,21 @@ void Search(Vertex *vertice, bool *visit_vertice, unsigned int *house_distance_l
 				}
 				if (!least_flag) {
 					most = distance;
-				}else {
+					for (unsigned int q = 0; q < house_num - 1; q ++) {
+						if (g_i_max[q] != 0){
+							if (g_house_distance_i_to_all[q][start_num] + g_i_max[q] < g_total_max) {
+								house_distance_least[start_num] = least + 1;
+								house_distance_most[start_num] = most + 1;
+								printf("적중!");
+								return;
+							}
+						}
+					}
+				} else {
 					if(distance > 1) {
 						least = distance;
 						least_flag = false;
+						/*
 						for (unsigned int q = 0; q < house_num - 1; q ++) {
 							if (g_i_max[q] != 0){
 								if (g_house_distance_i_to_all[q][start_num] + g_i_max[q] < g_total_max) {
@@ -316,7 +327,7 @@ void Search(Vertex *vertice, bool *visit_vertice, unsigned int *house_distance_l
 								}
 							}
 						}
-
+						*/
 					}
 				}
 				if(count_end == house_num) {	//위에서 말한대로 각 집들과의 거리를 다 구하면 리턴한다.
