@@ -165,7 +165,6 @@ int main(void) {
 
 	g_i_max = (unsigned int *) malloc(sizeof(unsigned int) * house_num);
 
-
 	//한 vertex와 인접한 vertex들정보와 집이 존재하는 여부와 집에 대한 정보를
 	//구조체 Vertex배열에다가 저장해둔다.
 	scanf("%d", &temp);
@@ -303,31 +302,22 @@ void Search(Vertex *vertice, bool *visit_vertice, unsigned int *house_distance_l
 				}
 				if (!least_flag) {
 					most = distance;
+					
 					for (unsigned int q = 0; q < house_num - 1; q ++) {
-						if (g_i_max[q] != 0){
+						if (g_i_max[q] != 0 && g_house_distance_i_to_all[q][start_num] != 0){
 							if (g_house_distance_i_to_all[q][start_num] + g_i_max[q] < g_total_max) {
 								house_distance_least[start_num] = least + 1;
-								house_distance_most[start_num] = most + 1;
-								printf("적중!");
+								house_distance_most[start_num] = least + 1;
 								return;
 							}
 						}
 					}
+				
+					
 				} else {
 					if(distance > 1) {
 						least = distance;
 						least_flag = false;
-						/*
-						for (unsigned int q = 0; q < house_num - 1; q ++) {
-							if (g_i_max[q] != 0){
-								if (g_house_distance_i_to_all[q][start_num] + g_i_max[q] < g_total_max) {
-									house_distance_least[start_num] = least + 1;
-									house_distance_most[start_num] = least + 1;
-									return;
-								}
-							}
-						}
-						*/
 					}
 				}
 				if(count_end == house_num) {	//위에서 말한대로 각 집들과의 거리를 다 구하면 리턴한다.
