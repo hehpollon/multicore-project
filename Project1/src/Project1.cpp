@@ -7,8 +7,6 @@
 #define NUM_THREAD 36
 #define MAX_EDGE_NUM 10
 
-
-//
 //	Vertex들을 Structure이다. 
 //
 //	count : 해당 vertex와 인접한 vertex들의 count
