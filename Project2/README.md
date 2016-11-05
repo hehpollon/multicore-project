@@ -111,6 +111,8 @@ x의 리스트에서 1보다 작은 version을 가진것들을 전부 지울 수
 
 저는 락중 뭘 쓸까 고민하다가 베이커리 락을 직접 만들어서 사용하기로 했습니다.
 
+
+
 ` 
 // declaration and initial values of global variables
     choosing: array [1..NUM_THREADS] of bool = {false};
@@ -144,6 +146,9 @@ x의 리스트에서 1보다 작은 version을 가진것들을 전부 지울 수
       }
   }
 `
+
+
+
 베이커리 알고리즘의 수드코드
 
 이를 사용했을 경우의 결과사진입니다. 
