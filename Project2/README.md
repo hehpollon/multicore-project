@@ -1,4 +1,4 @@
-예제 입니다.
+Simple MVCC 와 Garvage Collector
 ============
 GFM은
 —
