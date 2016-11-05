@@ -82,3 +82,37 @@ verbose에 찍힌 값들은 사이즈는 점점 커져가고 가장 최신으로
 
 
 ## 2. Garvage Collector
+
+Garvage Collector의 알고리즘은 다음과 같이 동작합니다. 일단 각 스레드별로 큐가 하나씩 있습니다.
+그리고 그 큐에는 해당 스레드 x가 Active중이어서 다른 스레드가 해당 스레드x를 참조할 경우, 큐에 값을 하나씩 집어넣습니다.
+
+![garvage_collector](./images/garvage_collector.png)
+
+이 큐에는 위와 같이 집어넣기 때문에 늘 캡쳐된 readview의 버전이 정렬이 되어있는체로 들어가게 됩니다. 
+즉 위에 보이는 것처럼 해당 스레드x가 version order이 1일때 액티브중으로 들어갔다면 다른 스레드들은 이 스레드의 캡쳐된
+리드뷰를 가져오게 될것이고 그 때마다 version order인 1이 x의 큐에 들어가게 될것입니다. 그러다가 해당 스레드가 업데이트 끝난 후
+다시 다음 업데이트를 하게되어 version order이 3이 된다면 인제 x의 큐에는 3이 들어가게 됩니다. 
+
+![garvage_collector2](./images/garvage_collector2.png)
+
+여기에서 아이디어를 착안하여 이렇게 1이 다 빠지게 되고 값이 바뀌는 그 순간에 minimum값을 1로 나두어서 
+x의 리스트에서 1보다 작은 version을 가진것들을 전부 지울 수 있게 됩니다.
+
+단 여기에서 주의해야 될 것은 큐에서 빠지게 되는 순서는 정해져있지 않고 1이 빠지다가 3이 빠지고 다시 1이 빠지는 
+다음과 같이 빠질 수 있기에 
+
+![garvage_collector3](./images/garvage_collector3.png)
+
+![garvage_collector4](./images/garvage_collector4.png)
+
+값이 바뀌는 그 순간의 바뀌기 전 값을 minimum으로 선정하여 삭제를 해줍니다.
+
+다음은 결과사진입니다.
+
+![garvage_1](./images/garvage_1.PNG)
+
+보시다시피 throuput이 garvage콜렉터를 적용하기 전보다는 조금 감소했습니다.
+
+![garvage_1](./images/garvage_2.PNG)
+
+그러나 확실하게 각각의 스레드의 리스트의 크기는 줄어들게 되었습니다.
