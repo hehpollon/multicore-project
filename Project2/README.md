@@ -100,8 +100,59 @@ x의 리스트에서 1보다 작은 version을 가진것들을 전부 지울 수
 
 ![garvage_1](./images/garvage_1.PNG)
 
-보시다시피 throuput이 garvage콜렉터를 적용하기 전보다는 조금 감소했습니다.
+보시다시피 throuput이 garvage콜렉터를 적용하기 전보다는 약 9만개정도 갑소했습니다.
 
 ![garvage_1](./images/garvage_2.PNG)
 
 그러나 확실하게 각각의 스레드의 리스트의 크기는 줄어들게 되었습니다.
+
+* * *
+## 3. bakery lock
+
+저는 락중 뭘 쓸까 고민하다가 베이커리 락을 직접 만들어서 사용하기로 했습니다.
+
+` 
+// declaration and initial values of global variables
+    choosing: array [1..NUM_THREADS] of bool = {false};
+    Number: array [1..NUM_THREADS] of integer = {0};
+     
+   lock(integer i) {
+       choosing[i] = true;
+       Number[i] = 1 + max(Number[1], ..., Number[NUM_THREADS]);
+       choosing[i] = false;
+       for (j = 1; j <= NUM_THREADS; j++) {
+           // Wait until thread j receives its number:
+           while (choosing[j]) { /* nothing */ }
+           // Wait until all threads with smaller numbers or with the same
+           // number, but with higher priority, finish their work:
+          while ((Number[j] != 0) && ((Number[j], j) < (Number[i], i))) {
+              /* nothing */
+          }
+      }
+  }
+
+  unlock(integer i) {
+      Number[i] = 0;
+  }
+
+  Thread(integer i) {
+      while (true) {
+          lock(i);
+          // The critical section goes here...
+          unlock(i);
+          // non-critical section...
+      }
+  }
+` 
+베이커리 알고리즘의 수드코드
+
+이를 사용했을 경우의 결과사진입니다. 
+
+
+![garvage_lock_1](./images/garvage_lock_1.PNG)
+
+보시다시피 throuput이 어마어마하게 감소하였습니다.
+
+![garvage_lock_2](./images/garvage_lock_2.PNG)
+
+이로 보아 소프트웨어적으로 락을 구현여 사용하는 것은 상당히 비효율적이 된다는 것을 알 수 있습니다. 
