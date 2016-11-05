@@ -1,0 +1,48 @@
+a	b	c	z
+1	x	1	1
+count(*)
+2
+Table	Op	Msg_type	Msg_text
+test.corrupt_bit_test_ā	check	Warning	InnoDB: Index "idx" is marked as corrupted
+test.corrupt_bit_test_ā	check	Warning	InnoDB: Index "idxā" is marked as corrupted
+test.corrupt_bit_test_ā	check	Warning	InnoDB: Index "idxē" is marked as corrupted
+test.corrupt_bit_test_ā	check	error	Corrupt
+ERROR HY000: Index "idx" is corrupted
+ERROR HY000: Index "idx" is corrupted
+ERROR HY000: Index corrupt_bit_test_ā is corrupted
+ERROR HY000: Index corrupt_bit_test_ā is corrupted
+Level	Code	Message
+Warning	180	InnoDB: Index "idxē" for table "test"."corrupt_bit_test_ā" is marked as corrupted
+Error	1712	Index corrupt_bit_test_ā is corrupted
+a	b	c	z
+10001	a	20001	20001
+Table	Op	Msg_type	Msg_text
+test.corrupt_bit_test_ā	check	Warning	InnoDB: Index "idx" is marked as corrupted
+test.corrupt_bit_test_ā	check	Warning	InnoDB: Index "idxē" is marked as corrupted
+test.corrupt_bit_test_ā	check	error	Corrupt
+ERROR HY000: Index corrupt_bit_test_ā is corrupted
+Table	Create Table
+corrupt_bit_test_ā	CREATE TABLE `corrupt_bit_test_ā` (
+  `a` int(11) NOT NULL AUTO_INCREMENT,
+  `b` char(100) DEFAULT NULL,
+  `c` int(11) DEFAULT NULL,
+  `z` int(11) DEFAULT NULL,
+  PRIMARY KEY (`a`),
+  UNIQUE KEY `idxē` (`z`,`b`),
+  KEY `idx` (`b`)
+) ENGINE=InnoDB AUTO_INCREMENT=10003 DEFAULT CHARSET=latin1
+ERROR HY000: Index "idx" is corrupted
+ERROR HY000: Index "idx" is corrupted
+Table	Create Table
+corrupt_bit_test_ā	CREATE TABLE `corrupt_bit_test_ā` (
+  `a` int(11) NOT NULL AUTO_INCREMENT,
+  `b` char(100) DEFAULT NULL,
+  `c` int(11) DEFAULT NULL,
+  `z` int(11) DEFAULT NULL,
+  PRIMARY KEY (`a`),
+  KEY `idx` (`b`)
+) ENGINE=InnoDB AUTO_INCREMENT=10003 DEFAULT CHARSET=latin1
+z
+20001
+1
+2
