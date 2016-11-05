@@ -1,9 +1,6 @@
 Simple MVCC 와 Garvage Collector
 ============
-****
 ## 1. 소개
-
-
 ### 1.1 대략적인 진행
 해당 프로그램은 대략적으로 다음과 같이 동작합니다. 
 1. 각 스레드마다 A, B , version을 가지는 노드를 가지는 링크리스트를 가지고 최초실행시 랜덤으로 A와 B의 값을 설정해주고 version은 0으로 초기화해줍니다. 그리고 각각의 스레드들의 업데이트를 실행시키고 한 업데이트가 끝날때마다 version order를 atomic하게 증가시
@@ -14,8 +11,6 @@ Simple MVCC 와 Garvage Collector
 
 
 - - -
-
-
 ### 1.2 프로그램이 Correctness하게 동작하기 위해 해야할 것들.
 모든 스레드들이 동시에 돌면서 서로서로의 스레드를 참조해가며 업데이트를 해가기에 충돌이 발생합니다.
 이를 위해서 다음과 같은 기법이 필요합니다.
@@ -50,8 +45,6 @@ Simple MVCC 와 Garvage Collector
 
 
 - - -
-
-
 ### 1.3 기타 유의할 것들.
 - 다음과 같은 3개의 글로벌 플래그를 사용하여 verbose와 duration동안 스레드가 진행되는 것을 조정합니다.
 
@@ -68,8 +61,6 @@ volatile bool g_is_verbosing = false;
 
 
 - - -
-
-
 ### 1.4 Garvage콜렉터와 락이 구현되지 않았을 경우의 결과 사진
 ![verbose_1](./images/verbose_1.PNG)
 
@@ -79,8 +70,6 @@ verbose에 찍힌 값들은 사이즈는 점점 커져가고 가장 최신으로
 
 
 * * *
-
-
 ## 2. Garvage Collector
 
 Garvage Collector의 알고리즘은 다음과 같이 동작합니다. 일단 각 스레드별로 큐가 하나씩 있습니다.
