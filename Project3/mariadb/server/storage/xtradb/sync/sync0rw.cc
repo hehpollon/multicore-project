@@ -264,14 +264,14 @@ rw_lock_create_func(
 	os_event_create(&lock->event);
 	os_event_create(&lock->wait_ex_event);
 
-	mutex_enter(&rw_lock_list_mutex);
+	//mutex_enter(&rw_lock_list_mutex);
 
 	ut_ad(UT_LIST_GET_FIRST(rw_lock_list) == NULL
 	      || UT_LIST_GET_FIRST(rw_lock_list)->magic_n == RW_LOCK_MAGIC_N);
 
 	UT_LIST_ADD_FIRST(list, rw_lock_list, lock);
 
-	mutex_exit(&rw_lock_list_mutex);
+	//mutex_exit(&rw_lock_list_mutex);
 }
 
 /******************************************************************//**

@@ -30,6 +30,8 @@ Mutex, the basic synchronization primitive
 Created 9/5/1995 Heikki Tuuri
 *******************************************************/
 
+//#define MUTEXON
+
 #include "sync0sync.h"
 #ifdef UNIV_NONINL
 #include "sync0sync.ic"
@@ -49,6 +51,9 @@ Created 9/5/1995 Heikki Tuuri
 #include "my_cpu.h"
 
 #include <vector>
+#include <pthread.h>
+
+pthread_mutex_t a_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 /*
 	REASONS FOR IMPLEMENTING THE SPIN LOCK MUTEX
@@ -210,7 +215,10 @@ UNIV_INTERN mysql_pfs_key_t	sync_thread_mutex_key;
 #endif /* UNIV_SYNC_DEBUG */
 
 /** Global list of database mutexes (not OS mutexes) created. */
+#define VIVAIN3
 UNIV_INTERN ut_list_base_node_t  mutex_list;
+UNIV_INTERN ut_list_base_node_t* split_mutex_list;
+
 
 /** Mutex protecting the mutex_list variable */
 UNIV_INTERN ib_mutex_t mutex_list_mutex;
@@ -252,6 +260,14 @@ struct sync_level_t{
 };
 #endif /* UNIV_SYNC_DEBUG */
 
+UNIV_INTERN
+void split_init(int num_cpu){
+	printf(" *** num_cpu : %d\n", num_cpu);
+	split_mutex_list = (ut_list_base_node_t *)malloc(sizeof(ut_list_base_node_t) * num_cpu);
+}
+
+
+
 /******************************************************************//**
 Creates, or rather, initializes a mutex object in a specified memory
 location (which must be appropriately aligned). The mutex is initialized
@@ -259,7 +275,7 @@ in the reset state. Explicit freeing of the mutex with mutex_free is
 necessary only if the memory block containing it is freed. */
 UNIV_INTERN
 void
-mutex_create_func(
+split_mutex_create_func(
 /*==============*/
 	ib_mutex_t*	mutex,		/*!< in: pointer to memory */
 #ifdef UNIV_DEBUG
@@ -269,7 +285,8 @@ mutex_create_func(
 #endif /* UNIV_DEBUG */
 	const char*	cfile_name,	/*!< in: file name where created */
 	ulint		cline,		/*!< in: file line where created */
-	const char*	cmutex_name)	/*!< in: mutex name */
+	const char*	cmutex_name,	/*!< in: mutex name */
+	ulint instance_no)
 {
 #if defined(HAVE_ATOMIC_BUILTINS)
 	mutex_reset_lock_word(mutex);
@@ -304,16 +321,91 @@ mutex_create_func(
 
 		return;
 	}
-
 	mutex_enter(&mutex_list_mutex);
 
 	ut_ad(UT_LIST_GET_LEN(mutex_list) == 0
 	      || UT_LIST_GET_FIRST(mutex_list)->magic_n == MUTEX_MAGIC_N);
 
+#define VIVAIN3
+	UT_LIST_ADD_FIRST(list, mutex_list, mutex);
+	mutex_exit(&mutex_list_mutex);
+
+}
+
+
+
+
+/******************************************************************//**
+Creates, or rather, initializes a mutex object in a specified memory
+location (which must be appropriately aligned). The mutex is initialized
+in the reset state. Explicit freeing of the mutex with mutex_free is
+necessary only if the memory block containing it is freed. */
+UNIV_INTERN
+void
+mutex_create_func(
+/*==============*/
+	ib_mutex_t*	mutex,		/*!< in: pointer to memory */
+#ifdef UNIV_DEBUG
+# ifdef UNIV_SYNC_DEBUG
+	ulint		level,		/*!< in: level */
+# endif /* UNIV_SYNC_DEBUG */
+#endif /* UNIV_DEBUG */
+	const char*	cfile_name,	/*!< in: file name where created */
+	ulint		cline,		/*!< in: file line where created */
+	const char*	cmutex_name)	/*!< in: mutex name */
+{
+
+#if defined(HAVE_ATOMIC_BUILTINS)
+	mutex_reset_lock_word(mutex);
+#else
+	os_fast_mutex_init(PFS_NOT_INSTRUMENTED, &mutex->os_fast_mutex);
+	mutex->lock_word = 0;
+#endif
+	os_event_create(&mutex->event);
+	mutex_set_waiters(mutex, 0);
+#ifdef UNIV_DEBUG
+	mutex->magic_n = MUTEX_MAGIC_N;
+	mutex->level = level;
+#endif /* UNIV_DEBUG */
+
+	mutex->line = 0;
+	mutex->file_name = "not yet reserved";
+	mutex->cfile_name = cfile_name;
+	mutex->cline = cline;
+	mutex->count_os_wait = 0;
+	mutex->cmutex_name=	  cmutex_name;
+
+	/* Check that lock_word is aligned; this is important on Intel */
+	ut_ad(((ulint)(&(mutex->lock_word))) % 4 == 0);
+
+	/* NOTE! The very first mutexes are not put to the mutex list */
+
+	if (mutex == &mutex_list_mutex
+#ifdef UNIV_SYNC_DEBUG
+	    || mutex == &sync_thread_mutex
+#endif /* UNIV_SYNC_DEBUG */
+	    ) {
+
+		return;
+	}
+#ifdef MUTEXON
+	//mutex_enter(&mutex_list_mutex);
+
+#endif
+
+	ut_ad(UT_LIST_GET_LEN(mutex_list) == 0
+	      || UT_LIST_GET_FIRST(mutex_list)->magic_n == MUTEX_MAGIC_N);
+
+#define VIVAIN3
 	UT_LIST_ADD_FIRST(list, mutex_list, mutex);
 
-	mutex_exit(&mutex_list_mutex);
+#ifdef MUTEXON
+	//mutex_exit(&mutex_list_mutex);
+#endif
 }
+
+
+
 
 /******************************************************************//**
 Creates, or rather, initializes a priority mutex object in a specified memory
@@ -379,7 +471,7 @@ mutex_free_func(
 #endif /* UNIV_SYNC_DEBUG */
 	    ) {
 
-		mutex_enter(&mutex_list_mutex);
+			mutex_enter(&mutex_list_mutex);
 
 		ut_ad(!UT_LIST_GET_PREV(list, mutex)
 		      || UT_LIST_GET_PREV(list, mutex)->magic_n
@@ -389,8 +481,8 @@ mutex_free_func(
 		      == MUTEX_MAGIC_N);
 
 		UT_LIST_REMOVE(list, mutex_list, mutex);
-
 		mutex_exit(&mutex_list_mutex);
+
 	}
 
 	os_event_free(&mutex->event, false);
@@ -771,9 +863,7 @@ mutex_list_print_info(
 	fputs("----------\n"
 	      "MUTEX INFO\n"
 	      "----------\n", file);
-
 	mutex_enter(&mutex_list_mutex);
-
 	mutex = UT_LIST_GET_FIRST(mutex_list);
 
 	while (mutex != NULL) {
@@ -793,7 +883,6 @@ mutex_list_print_info(
 	}
 
 	fprintf(file, "Total number of mutexes %ld\n", count);
-
 	mutex_exit(&mutex_list_mutex);
 }
 
@@ -1023,7 +1112,6 @@ sync_thread_levels_contains(
 	}
 
 	mutex_enter(&sync_thread_mutex);
-
 	thread_slot = sync_thread_level_arrays_find_slot();
 
 	if (thread_slot == NULL) {
@@ -1048,7 +1136,6 @@ sync_thread_levels_contains(
 	}
 
 	mutex_exit(&sync_thread_mutex);
-
 	return(NULL);
 }
 
@@ -1072,7 +1159,6 @@ sync_thread_levels_nonempty_gen(
 	}
 
 	mutex_enter(&sync_thread_mutex);
-
 	thread_slot = sync_thread_level_arrays_find_slot();
 
 	if (thread_slot == NULL) {
@@ -1103,7 +1189,6 @@ sync_thread_levels_nonempty_gen(
 	}
 
 	mutex_exit(&sync_thread_mutex);
-
 	return(NULL);
 }
 

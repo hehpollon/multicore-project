@@ -65,6 +65,13 @@ Created 11/5/1995 Heikki Tuuri
 #include "fil0pagecompress.h"
 #include "ha_prototypes.h"
 
+
+#include <unistd.h>
+
+#include <pthread.h>
+
+
+
 /* Enable this for checksum error messages. */
 //#ifdef UNIV_DEBUG
 //#define UNIV_DEBUG_LEVEL2 1
@@ -1189,10 +1196,11 @@ buf_block_init(
 /*===========*/
 	buf_pool_t*	buf_pool,	/*!< in: buffer pool instance */
 	buf_block_t*	block,		/*!< in: pointer to control block */
-	byte*		frame)		/*!< in: pointer to buffer frame */
+	byte*		frame,       /*!< in: pointer to buffer frame */
+	ulint		instance_no)	/*!< in: id of the instance */
 {
 	UNIV_MEM_DESC(frame, UNIV_PAGE_SIZE);
-
+	
 	block->frame = frame;
 
 	block->page.buf_pool_index = buf_pool_index(buf_pool);
@@ -1230,28 +1238,33 @@ buf_block_init(
 #endif /* UNIV_AHI_DEBUG || UNIV_DEBUG */
 	page_zip_des_init(&block->page.zip);
 
+
 #if defined PFS_SKIP_BUFFER_MUTEX_RWLOCK || defined PFS_GROUP_BUFFER_SYNC
 	/* If PFS_SKIP_BUFFER_MUTEX_RWLOCK is defined, skip registration
 	of buffer block mutex/rwlock with performance schema. If
 	PFS_GROUP_BUFFER_SYNC is defined, skip the registration
 	since buffer block mutex/rwlock will be registered later in
 	pfs_register_buffer_block() */
-
+	
+	// this part is running
+	UNIV_INTERN ib_mutex_t mutex_list_mutex;
 	mutex_create(PFS_NOT_INSTRUMENTED, &block->mutex, SYNC_BUF_BLOCK);
 	rw_lock_create(PFS_NOT_INSTRUMENTED, &block->lock, SYNC_LEVEL_VARYING);
 
 # ifdef UNIV_SYNC_DEBUG
 	rw_lock_create(PFS_NOT_INSTRUMENTED,
 		       &block->debug_latch, SYNC_NO_ORDER_CHECK);
+
 # endif /* UNIV_SYNC_DEBUG */
 
 #else /* PFS_SKIP_BUFFER_MUTEX_RWLOCK || PFS_GROUP_BUFFER_SYNC */
-	mutex_create(buffer_block_mutex_key, &block->mutex, SYNC_BUF_BLOCK);
+	split_mutex_create(buffer_block_mutex_key, &block->mutex, SYNC_BUF_BLOCK, instance_no);
 	rw_lock_create(buf_block_lock_key, &block->lock, SYNC_LEVEL_VARYING);
 
 # ifdef UNIV_SYNC_DEBUG
 	rw_lock_create(buf_block_debug_latch_key,
 		       &block->debug_latch, SYNC_NO_ORDER_CHECK);
+
 # endif /* UNIV_SYNC_DEBUG */
 #endif /* PFS_SKIP_BUFFER_MUTEX_RWLOCK || PFS_GROUP_BUFFER_SYNC */
 
@@ -1267,7 +1280,8 @@ buf_chunk_init(
 /*===========*/
 	buf_pool_t*	buf_pool,	/*!< in: buffer pool instance */
 	buf_chunk_t*	chunk,		/*!< out: chunk of buffers */
-	ulint		mem_size)	/*!< in: requested size in bytes */
+	ulint		mem_size,	/*!< in: requested size in bytes */
+	ulint		instance_no)	/*!< in: id of the instance */
 {
 	buf_block_t*	block;
 	byte*		frame;
@@ -1343,18 +1357,22 @@ buf_chunk_init(
 
 	for (i = chunk->size; i--; ) {
 
-		buf_block_init(buf_pool, block, frame);
+		buf_block_init(buf_pool, block, frame, instance_no);
+		
 		UNIV_MEM_INVALID(block->frame, UNIV_PAGE_SIZE);
 
 		/* Add the block to the free list */
 		UT_LIST_ADD_LAST(list, buf_pool->free, (&block->page));
 
 		ut_d(block->page.in_free_list = TRUE);
+		
 		ut_ad(buf_pool_from_block(block) == buf_pool);
 
 		block++;
 		frame += UNIV_PAGE_SIZE;
 	}
+
+	// merge the lists
 
 #ifdef PFS_GROUP_BUFFER_SYNC
 	pfs_register_buffer_block(chunk);
@@ -1504,6 +1522,8 @@ buf_pool_init_instance(
 	ulint		buf_pool_size,	/*!< in: size in bytes */
 	ulint		instance_no)	/*!< in: id of the instance */
 {
+
+// buf_pool, instanace no is parallel
 	ulint		i;
 	buf_chunk_t*	chunk;
 
@@ -1529,8 +1549,8 @@ buf_pool_init_instance(
 			(buf_chunk_t*) mem_zalloc(sizeof *chunk);
 
 		UT_LIST_INIT(buf_pool->free);
-
-		if (!buf_chunk_init(buf_pool, chunk, buf_pool_size)) {
+		// buf_pool, chunk is parallel
+		if (!buf_chunk_init(buf_pool, chunk, buf_pool_size, instance_no)) {
 			mem_free(chunk);
 			mem_free(buf_pool);
 
@@ -1683,6 +1703,27 @@ buf_pool_free_instance(
 	buf_pool->tmp_arr = NULL;
 }
 
+struct PassArguments{
+	int thread_no;
+	ulint	size;
+};
+
+// TODO modify arg arguments buf_pool_ptr, size, i
+void *RunThread(void *arg) {
+	PassArguments* pa = (PassArguments *)arg;
+    int thread_index = pa->thread_no;
+	ulint	size = pa->size;
+	//printf("%d is running \n",thread_index);
+	
+	buf_pool_t* ptr = &buf_pool_ptr[thread_index];
+	
+	if (buf_pool_init_instance(ptr, size, thread_index) != DB_SUCCESS) {
+		buf_pool_free(thread_index);
+		printf("DB ERROR\n");
+	}
+}
+
+#define MULTITHREAD
 /********************************************************************//**
 Creates the buffer pool.
 @return	DB_SUCCESS if success, DB_ERROR if not enough memory or error */
@@ -1714,21 +1755,53 @@ buf_pool_init(
 		}
 	}
 #endif // HAVE_LIBNUMA
+#ifdef MULTITHREAD
+	printf(" *** multi-thread_version\n");
+#else
+	printf(" *** single-thread_version\n");
+#endif
+
 
 	buf_pool_ptr = (buf_pool_t*) mem_zalloc(
 		n_instances * sizeof *buf_pool_ptr);
 
+
+	split_init(n_instances);
+	pthread_t *threads;
+	threads = (pthread_t*)malloc(n_instances * sizeof(pthread_t));
+
+#define VIVAIN3
 	for (i = 0; i < n_instances; i++) {
+#ifdef MULTITHREAD
+		PassArguments* pa;
+		pa = (PassArguments *)malloc(sizeof(PassArguments));
+		pa->size = size;
+		pa->thread_no = i;
+		if (pthread_create(&threads[i], 0, RunThread, (void *)pa) < 0) {
+			printf("pthread_create error!\n"); 
+			return DB_ERROR;
+		} 
+#else
+		
 		buf_pool_t*	ptr	= &buf_pool_ptr[i];
 
 		if (buf_pool_init_instance(ptr, size, i) != DB_SUCCESS) {
 
-			/* Free all the instances created so far. */
 			buf_pool_free(i);
 
 			return(DB_ERROR);
 		}
+#endif
+		
 	}
+
+#ifdef MULTITHREAD
+
+	for (int i = 0; i < n_instances; i++) {
+        pthread_join(threads[i], (void**)NULL);
+    }
+
+#endif
 
 	buf_pool_set_sizes();
 	buf_LRU_old_ratio_update(100 * 3/ 8, FALSE);

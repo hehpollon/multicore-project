@@ -185,6 +185,8 @@ necessary only if the memory block containing it is freed. */
 # else
 #  define mutex_create(K, M, level)				\
 	pfs_mutex_create_func((K), (M), __FILE__, __LINE__, #M)
+#  define split_mutex_create(K, M, level, N)			\
+	split_pfs_mutex_create_func((K), (M), __FILE__, __LINE__, #M, (N))
 # endif	/* UNIV_DEBUG */
 
 # define mutex_enter(M)						\
@@ -261,6 +263,29 @@ Creates, or rather, initializes a priority mutex object in a specified memory
 location (which must be appropriately aligned). The mutex is initialized
 in the reset state. Explicit freeing of the mutex with mutex_free is
 necessary only if the memory block containing it is freed. */
+
+UNIV_INTERN
+void
+split_init(int num_cpu);
+
+
+UNIV_INTERN
+void
+split_mutex_create_func(
+/*==============*/
+	ib_mutex_t*	mutex,		/*!< in: pointer to memory */
+#ifdef UNIV_DEBUG
+# ifdef UNIV_SYNC_DEBUG
+	ulint		level,		/*!< in: level */
+# endif /* UNIV_SYNC_DEBUG */
+#endif /* UNIV_DEBUG */
+	const char*	cfile_name,	/*!< in: file name where created */
+	ulint		cline,		/*!< in: file line where created */
+	const char*	cmutex_name,	/*!< in: mutex name */
+	ulint instance_no);
+
+
+
 UNIV_INTERN
 void
 mutex_create_func(
@@ -940,6 +965,7 @@ struct ib_mutex_t {
 				may be) threads waiting in the global wait
 				array for this mutex to be released.
 				Otherwise, this is 0. */
+#define VIVAIN3
 	UT_LIST_NODE_T(ib_mutex_t)	list; /*!< All allocated mutexes are put into
 				a list.	Pointers to the next and prev. */
 

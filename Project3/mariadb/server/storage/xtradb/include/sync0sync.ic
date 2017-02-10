@@ -83,10 +83,10 @@ ib_mutex_test_and_set(
 	ib_mutex_t*	mutex)	/*!< in: mutex */
 {
 #if defined(HAVE_ATOMIC_BUILTINS)
+// this part is running
 	return(os_atomic_test_and_set(&mutex->lock_word));
 #else
 	ibool	ret;
-
 	ret = os_fast_mutex_trylock_full_barrier(&(mutex->os_fast_mutex));
 
 	if (ret == 0) {
@@ -544,6 +544,37 @@ pfs_mutex_create_func(
 			  cline,
 			  cmutex_name);
 }
+
+UNIV_INLINE
+void
+split_pfs_mutex_create_func(
+/*==================*/
+	mysql_pfs_key_t	key,		/*!< in: Performance Schema key */
+	ib_mutex_t*	mutex,		/*!< in: pointer to memory */
+# ifdef UNIV_DEBUG
+#  ifdef UNIV_SYNC_DEBUG
+	ulint		level,		/*!< in: level */
+#  endif /* UNIV_SYNC_DEBUG */
+# endif /* UNIV_DEBUG */
+	const char*	cfile_name,	/*!< in: file name where created */
+	ulint		cline,		/*!< in: file line where created */
+	const char*	cmutex_name,	/*!< in: mutex name */
+	ulint instance_no)
+{
+	mutex->pfs_psi = PSI_MUTEX_CALL(init_mutex)(key, mutex);
+
+	split_mutex_create_func(mutex,
+# ifdef UNIV_DEBUG
+#  ifdef UNIV_SYNC_DEBUG
+			  level,
+#  endif /* UNIV_SYNC_DEBUG */
+# endif /* UNIV_DEBUG */
+			  cfile_name,
+			  cline,
+			  cmutex_name,
+			  instance_no);
+}
+
 
 /******************************************************************//**
 NOTE! Please use the corresponding macro mutex_create(), not directly

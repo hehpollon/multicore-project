@@ -107,6 +107,9 @@ Created 2/16/1996 Heikki Tuuri
 # include "ut0crc32.h"
 # include "os0stacktrace.h"
 
+#include <unistd.h>
+
+
 /** Log sequence number immediately after startup */
 UNIV_INTERN lsn_t	srv_start_lsn;
 /** Log sequence number at shutdown */
@@ -2100,7 +2103,16 @@ innobase_start_or_create_for_mysql(void)
 	ib_logf(IB_LOG_LEVEL_INFO,
 		"Initializing buffer pool, size = %.1f%c", size, unit);
 
+	srv_buf_pool_instances = sysconf(_SC_NPROCESSORS_ONLN);
+
+	struct timeval start, end;
+	gettimeofday(&start, NULL);
+	
 	err = buf_pool_init(srv_buf_pool_size, srv_buf_pool_instances);
+
+	gettimeofday(&end,NULL);
+	printf(" *** init time : %lld\n", (end.tv_sec * 1000000 + end.tv_usec) - 
+		(start.tv_sec * 1000000 + start.tv_usec));
 
 	if (err != DB_SUCCESS) {
 		ib_logf(IB_LOG_LEVEL_ERROR,

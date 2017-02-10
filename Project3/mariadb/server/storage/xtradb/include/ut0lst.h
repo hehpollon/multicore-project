@@ -26,6 +26,8 @@ Created 9/10/1995 Heikki Tuuri
 #ifndef ut0lst_h
 #define ut0lst_h
 
+
+
 #include "univ.i"
 
 /*******************************************************************//**
@@ -71,12 +73,14 @@ struct LRU_node_t {
 }
 The example implements an LRU list of name LRU_list. Its nodes are of type
 LRU_node_t. */
-
+#define VIVAIN3
 template <typename TYPE>
 struct ut_list_node {
 	TYPE* 	prev;	/*!< pointer to the previous node,
 			NULL if start of list */
 	TYPE* 	next;	/*!< pointer to next node, NULL if end of list */
+
+	volatile int mark;
 };
 
 #define UT_LIST_NODE_T(TYPE)	ut_list_node<TYPE>
@@ -95,6 +99,10 @@ ut_elem_get_node(Type&	elem, size_t offset)
 	return(*reinterpret_cast<ut_list_node<Type>*>(
 		reinterpret_cast<byte*>(&elem) + offset));
 }
+
+
+
+
 
 /*******************************************************************//**
 Initializes the base node of a two-way list.
@@ -119,7 +127,11 @@ ut_list_prepend(
 	Type&		elem,
 	size_t		offset)
 {
+	ut_list_free_prepend(list,elem,offset);
+	return;
+
 	ut_list_node<Type>&	elem_node = ut_elem_get_node(elem, offset);
+
 
  	elem_node.prev = 0;
  	elem_node.next = list.start;
@@ -138,9 +150,59 @@ ut_list_prepend(
 	if (list.end == 0) {
 		list.end = &elem;
 	}
-
 	++list.count;
 }
+
+template <typename List, typename Type>
+void
+ut_list_free_prepend(
+	List&		list,
+	Type&		elem,
+	size_t		offset)
+{
+	Type *prev = NULL;
+	ut_list_node<Type>&	elem_node = ut_elem_get_node(elem, offset);
+ 	elem_node.prev = 0;
+	prev = __sync_lock_test_and_set(&(list.start), &elem);
+	elem_node.next = prev;
+	if(prev != 0) { 
+		ut_list_node<Type>&	prev_node = ut_elem_get_node(*prev, offset);
+		prev_node.prev = &elem;
+	}
+
+	if (list.end == 0) {
+		list.end = &elem;
+	}
+
+	__sync_fetch_and_add(&list.count, 1);
+	
+}
+
+template <typename List, typename Type>
+void
+ut_list_free_append(
+	List&		list,
+	Type&		elem,
+	size_t		offset)
+{
+	Type *next = NULL;
+	ut_list_node<Type>&	elem_node = ut_elem_get_node(elem, offset);
+ 	elem_node.next = 0;
+	next = __sync_lock_test_and_set(&(list.end), &elem);
+	elem_node.prev = next;
+	if(next != 0) { 
+		ut_list_node<Type>&	next_node = ut_elem_get_node(*next, offset);
+		next_node.next = &elem;
+	}
+
+	if (list.start == 0) {
+		list.start = &elem;
+	}
+
+	__sync_fetch_and_add(&list.count, 1);
+	
+}
+
 
 /*******************************************************************//**
 Adds the node as the first element in a two-way linked list.
@@ -162,6 +224,10 @@ ut_list_append(
 	Type&		elem,
 	size_t		offset)
 {
+
+	ut_list_free_append(list,elem,offset);
+	return;
+
 	ut_list_node<Type>&	elem_node = ut_elem_get_node(elem, offset);
 
 	elem_node.next = 0;
